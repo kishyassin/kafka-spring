@@ -40,14 +40,20 @@ public class PageEventController {
         return Flux.interval(Duration.ofSeconds(1))
                 .map(sequence -> {
                     Map<String, Long> stringLongMap = new HashMap<>();
-                    ReadOnlyWindowStore<String, Long> windowStore = interactiveQueryService.getQueryableStore("count-store", QueryableStoreTypes.windowStore());
-                    Instant now = Instant.now();
-                    Instant from = now.minusMillis(5000);
-                    KeyValueIterator<Windowed<String>, Long> fetchAll = windowStore.fetchAll(from, now);
-                    //WindowStoreIterator<Long> fetchAll = windowStore.fetch(page, from, now);
-                    while (fetchAll.hasNext()) {
-                        KeyValue<Windowed<String>, Long> next = fetchAll.next();
-                        stringLongMap.put(next.key.key(), next.value);
+                    try {
+                        ReadOnlyWindowStore<String, Long> windowStore = interactiveQueryService.getQueryableStore("count-store", QueryableStoreTypes.windowStore());
+                        if (windowStore != null) {
+                            Instant now = Instant.now();
+                            Instant from = now.minusMillis(5000);
+                            try (KeyValueIterator<Windowed<String>, Long> fetchAll = windowStore.fetchAll(from, now)) {
+                                while (fetchAll != null && fetchAll.hasNext()) {
+                                    KeyValue<Windowed<String>, Long> next = fetchAll.next();
+                                    stringLongMap.put(next.key.key(), next.value);
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        // Store may not be available yet (e.g. startup or rebalancing)
                     }
                     return stringLongMap;
                 });

@@ -42,13 +42,20 @@
 
     var stockEventSource = new EventSource("/analytics");
     stockEventSource.addEventListener("message", function (event) {
-        var data = JSON.parse(event.data);
-        var now = new Date().getTime();
-        Object.keys(data).forEach(function (pageName) {
-            var series = getOrCreateSeries(pageName);
-            series.append(now, data[pageName]);
-        });
+        try {
+            var data = JSON.parse(event.data);
+            var now = new Date().getTime();
+            Object.keys(data).forEach(function (pageName) {
+                var series = getOrCreateSeries(pageName);
+                series.append(now, data[pageName]);
+            });
+        } catch (e) {
+            console.error("Error parsing event data:", e);
+        }
     });
+    stockEventSource.onerror = function (err) {
+        console.error("EventSource error:", err);
+    };
 </script>
 </body>
 </html>
